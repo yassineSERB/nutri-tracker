@@ -52,7 +52,7 @@ export function Logo({ className = "h-7 w-7" }: LogoProps) {
 export function LogoWordmark({
   className,
   linkTo,
-  linkLabel = "app-web, accueil",
+  linkLabel = "Food Tracker, accueil",
 }: {
   className?: string;
   /** When set, the wordmark becomes a link to this route. */
@@ -62,7 +62,7 @@ export function LogoWordmark({
   const mark = (
     <>
       <Logo />
-      <span className="text-sm font-semibold">app-web</span>
+      <span className="text-sm font-semibold">Food Tracker</span>
     </>
   );
 

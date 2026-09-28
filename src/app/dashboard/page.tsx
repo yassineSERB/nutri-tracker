@@ -15,7 +15,6 @@ import {
   totalsFor,
 } from "@/lib/dal";
 import { computeGoals } from "@/lib/goals";
-import { SignOutButton } from "./sign-out-button";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -165,27 +164,6 @@ export default async function DashboardPage() {
             </Link>
           </div>
         </section>
-
-        <section className="mt-10 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
-            <dt className="text-sm text-black/60 dark:text-white/60">Email</dt>
-            <dd className="mt-1 font-medium">{session?.user?.email}</dd>
-          </div>
-          <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
-            <dt className="text-sm text-black/60 dark:text-white/60">
-              Expiration de session
-            </dt>
-            <dd className="mt-1 font-medium">
-              {session?.expires
-                ? new Date(session.expires).toLocaleString()
-                : "—"}
-            </dd>
-          </div>
-        </section>
-
-        <div className="mt-8">
-          <SignOutButton />
-        </div>
       </main>
     </AppShell>
   );
