@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790595839161,
+      "tag": "0000_bumpy_thunderbolt_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790597878241,
+      "tag": "0001_lowly_centennial",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790598570861,
+      "tag": "0002_pink_gateway",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790600226856,
+      "tag": "0003_multi_user",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790601132577,
+      "tag": "0004_natural_thunderbird",
+      "breakpoints": true
+    }
+  ]
+}
