@@ -12,7 +12,14 @@ import {
   MEAL_TYPES,
   SEXES,
 } from "@/db/schema";
-import { addWater, currentUserId, saveProfile, verifySession } from "@/lib/dal";
+import {
+  addWater,
+  currentUserId,
+  deleteBloodPanel,
+  saveBloodResults,
+  saveProfile,
+  verifySession,
+} from "@/lib/dal";
 import {
   foodPayloadSchema,
   importProduct,
@@ -125,6 +132,78 @@ const dayKeySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide");
 
+/**
+ * A bound the form left blank is "the lab printed none", which is null and not
+ * zero: zero would be a real, if very low, limit.
+ *
+ * The empty string is listed *before* `z.coerce.number()` on purpose. Coercion
+ * accepts `null` and turns it into `0`, which would silently record "LDL has a
+ * lower bound of 0" and flag every result as out of range; keeping the
+ * literals first means the transform below only ever sees them as null.
+ */
+const labBound = z
+  .union([z.literal(""), z.literal(null), z.coerce.number().finite()])
+  .transform((v) => (v === "" || v === null ? null : (v as number)))
+  .refine((v) => v === null || Math.abs(v) < 1e6, "Borne de référence invalide");
+
+const bloodResultSchema = z.object({
+  analyte: z.string().min(1).max(40),
+  value: z.coerce.number().finite(),
+  unit: z.string().min(1).max(20),
+  refLow: labBound,
+  refHigh: labBound,
+  note: z
+    .union([z.literal(""), z.literal(null), z.string().max(200)])
+    .transform((v) => (v === "" || v === null ? null : v)),
+});
+
+const bloodPanelSchema = z.object({
+  testOn: dayKeySchema,
+  results: z.array(bloodResultSchema).max(60),
+});
+
+/**
+ * Stores a whole panel for one date. Blank analytes are dropped client-side, so
+ * anything arriving here is a measurement the user actually filled in. Saving an
+ * existing date replaces it, which is how a mistyped value is corrected.
+ */
+export async function saveBloodPanel(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const raw = formData.get("panel");
+  const parsed = bloodPanelSchema.safeParse(
+    typeof raw === "string" ? safeJsonParse(raw) : null,
+  );
+
+  if (!parsed.success) {
+    return { error: "Panneau invalide." };
+  }
+
+  const { testOn, results } = parsed.data;
+
+  if (results.length === 0) {
+    return { error: "Renseigne au moins une valeur." };
+  }
+
+  await saveBloodResults(testOn, results);
+  revalidatePath("/analyses");
+
+  return {
+    message:
+      results.length === 1
+        ? "1 valeur enregistrée."
+        : `${results.length} valeurs enregistrées.`,
+  };
+}
+
+export async function removeBloodPanel(formData: FormData): Promise<void> {
+  const testOn = dayKeySchema.safeParse(formData.get("testOn"));
+  if (!testOn.success) return;
+
+  await deleteBloodPanel(testOn.data);
+  revalidatePath("/analyses");
+}
 /** Empty input means "no override", not zero: the form sends "" for a cleared
  *  goal and the column goes back to null so the formula takes over again. */
 const optionalNumber = z

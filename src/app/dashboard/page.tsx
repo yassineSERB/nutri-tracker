@@ -77,12 +77,21 @@ export default async function DashboardPage() {
           </Link>
         </section>
 
-        <section className="mt-6 space-y-4">
+        <section className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
+            <h3 className="text-sm font-medium">Macronutriments du jour</h3>
+            <div className="mt-3">
+              <MacrosChart totals={todayTotals} />
+            </div>
+          </div>
           <GoalsPanel
-            totals={totalsFor(todayEntries)}
+            totals={todayTotals}
             waterGlasses={water.glasses}
             goals={goals}
           />
+        </section>
+
+        <section className="mt-4">
           <WaterTracker dayKey={dayKey} glasses={water.glasses} />
         </section>
 
@@ -103,18 +112,11 @@ export default async function DashboardPage() {
             Seuls les jours avec au moins une entrée sont représentés.
           </p>
 
-          <div className="mt-3 grid gap-4 lg:grid-cols-2">
+          <div className="mt-3">
             <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
               <h3 className="text-sm font-medium">Calories</h3>
               <div className="mt-3">
                 <CaloriesChart data={chartData} goalKcal={goals.kcal} />
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
-              <h3 className="text-sm font-medium">Macronutriments</h3>
-              <div className="mt-3">
-                <MacrosChart data={chartData} goals={goals} />
               </div>
             </div>
           </div>
