@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { AppShell } from "@/components/app-shell";
 import { BloodPanelForm } from "@/components/blood-panel-form";
 import { BloodPanelList } from "@/components/blood-panel-list";
+import { Modal } from "@/components/modal";
 import { getBloodPanels } from "@/lib/dal";
 
 export default async function AnalysesPage() {
@@ -18,10 +19,19 @@ export default async function AnalysesPage() {
         </p>
 
         <section className="mt-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-black/60 dark:text-white/60">
-            Saisir un bilan
-          </h2>
-          <BloodPanelForm />
+          <Modal
+            title="Nouveau bilan"
+            trigger={
+              <button
+                type="button"
+                className="rounded-md bg-foreground px-4 py-2 text-sm text-background"
+              >
+                Ajouter un bilan
+              </button>
+            }
+          >
+            <BloodPanelForm />
+          </Modal>
         </section>
 
         <section className="mt-10">

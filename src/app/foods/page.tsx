@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { AppShell } from "@/components/app-shell";
 import { FoodFinder } from "@/components/food-finder";
 import { ManualFoodForm } from "@/components/manual-food-form";
+import { Modal } from "@/components/modal";
 import { CatalogRow } from "@/components/food-search";
 import { listSavedFoods } from "@/lib/dal";
 
@@ -25,7 +26,19 @@ export default async function FoodsPage() {
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-black/60 dark:text-white/60">
             Ajouter à la main
           </h2>
-          <ManualFoodForm />
+          <Modal
+            title="Ajouter un aliment"
+            trigger={
+              <button
+                type="button"
+                className="rounded-md bg-foreground px-4 py-2 text-sm text-background"
+              >
+                Ajouter un aliment
+              </button>
+            }
+          >
+            <ManualFoodForm />
+          </Modal>
         </section>
 
         <section className="mt-10">
