@@ -167,9 +167,43 @@ export const waterLogs = sqliteTable(
   (table) => [primaryKey({ columns: [table.userId, table.dayKey] })],
 );
 
-export type Profile = typeof profiles.$inferSelect;
-export type NewProfile = typeof profiles.$inferInsert;
+/**
+ * One row per measured analyte, so a panel is a set of rows sharing `testOn`.
+ * The lab's own bounds are stored on the row rather than looked up from a
+ * reference table: ranges differ between laboratories, between sexes and over
+ * the years, so rewriting a shared table would silently change what "in range"
+ * meant for past results.
+ */
+export const bloodResults = sqliteTable(
+  "blood_results",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Local `YYYY-MM-DD`, the same convention as `entries.eatenOn`. */
+    testOn: text("test_on").notNull(),
+    /** Code from `ANALYTES` in `src/lib/lab.ts`. */
+    analyte: text("analyte").notNull(),
+    value: real("value").notNull(),
+    unit: text("unit").notNull(),
+    /** Null means the lab published no bound on that side. */
+    refLow: real("ref_low"),
+    refHigh: real("ref_high"),
+    note: text("note"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("blood_results_user_id_idx").on(table.userId),
+    index("blood_results_user_test_idx").on(table.userId, table.testOn),
+  ],
+);
+
+export type Profile = typeof profiles.$inferSelect;export type NewProfile = typeof profiles.$inferInsert;
 export type WaterLog = typeof waterLogs.$inferSelect;
+export type BloodResult = typeof bloodResults.$inferSelect;
 export type Food = typeof foods.$inferSelect;
 export type NewFood = typeof foods.$inferInsert;
 export type Entry = typeof entries.$inferSelect;

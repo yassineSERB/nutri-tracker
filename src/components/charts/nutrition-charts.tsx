@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
-  Legend,
+  Cell,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -14,7 +14,7 @@ import {
   YAxis,
 } from "recharts";
 
-import type { DailyGoals } from "@/lib/goals";
+import type { DayTotals } from "@/lib/dal";
 
 export type ChartPoint = {
   /** `YYYY-MM-DD`, shown as `DD/MM` on the axis. */
@@ -93,58 +93,93 @@ const MACRO_COLORS = {
   fat: "#db2777",
 } as const;
 
-export function MacrosChart({ data, goals }: { data: ChartPoint[]; goals: DailyGoals }) {
-  if (data.length === 0) {
-    return <EmptyChart message="Aucune entrée sur la période." />;
+/** Grams to kcal so the donut slices show the true energy share of the day. */
+const KCAL_PER_G = { protein: 4, carbs: 4, fat: 9 } as const;
+
+type MacroSlice = { name: string; grams: number; kcal: number; color: string };
+
+function DonutLegend({ slices, totalKcal }: { slices: MacroSlice[]; totalKcal: number }) {
+  return (
+    <ul className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
+      {slices.map((s) => (
+        <li key={s.name} className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+          <span className="text-black/70 dark:text-white/70">{s.name}</span>
+          <span className="tabular-nums">
+            {Math.round(s.grams)} g · {Math.round(s.kcal)} kcal
+          </span>
+          <span className="tabular-nums text-black/50 dark:text-white/50">
+            ({Math.round((s.kcal / totalKcal) * 100)} %)
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function MacrosChart({ totals }: { totals: DayTotals }) {
+  if (totals.kcal <= 0 || totals.itemCount === 0) {
+    return <EmptyChart message="Aucune entrée aujourd’hui." />;
   }
 
+  const slices: MacroSlice[] = (
+    [
+      { key: "protein", name: "Protéines", color: MACRO_COLORS.protein },
+      { key: "carbs", name: "Glucides", color: MACRO_COLORS.carbs },
+      { key: "fat", name: "Lipides", color: MACRO_COLORS.fat },
+    ] as const
+  )
+    .map(({ key, name, color }) => ({
+      name,
+      grams: totals[key],
+      kcal: totals[key] * KCAL_PER_G[key],
+      color,
+    }))
+    .filter((s) => s.grams > 0);
+
+  if (slices.length === 0) {
+    return <EmptyChart message="Aucune entrée aujourd’hui." />;
+  }
+
+  const totalKcal = slices.reduce((sum, s) => sum + s.kcal, 0);
+
   return (
-    <div className="h-64 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-          <CartesianGrid stroke="currentColor" opacity={0.1} vertical={false} />
-          <XAxis dataKey="label" tick={AXIS} tickLine={false} minTickGap={16} />
-          <YAxis tick={AXIS} tickLine={false} axisLine={false} width={40} />
-          <Tooltip
-            formatter={(value, name) => [`${Math.round(Number(value))} g`, String(name)]}
-            contentStyle={{
-              fontSize: 12,
-              borderRadius: 8,
-              border: "1px solid currentColor",
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar
-            dataKey="protein"
-            name="Protéines"
-            stackId="macros"
-            fill={MACRO_COLORS.protein}
-            isAnimationActive={false}
-          />
-          <Bar
-            dataKey="carbs"
-            name="Glucides"
-            stackId="macros"
-            fill={MACRO_COLORS.carbs}
-            isAnimationActive={false}
-          />
-          <Bar
-            dataKey="fat"
-            name="Lipides"
-            stackId="macros"
-            fill={MACRO_COLORS.fat}
-            radius={[2, 2, 0, 0]}
-            isAnimationActive={false}
-          />
-          {goals.protein ? (
-            <ReferenceLine
-              y={goals.protein}
-              stroke={MACRO_COLORS.protein}
-              strokeDasharray="4 4"
+    <div>
+      <div className="relative h-56 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={slices}
+              dataKey="kcal"
+              nameKey="name"
+              innerRadius="62%"
+              outerRadius="88%"
+              paddingAngle={2}
+              stroke="none"
+              isAnimationActive={false}
+            >
+              {slices.map((s) => (
+                <Cell key={s.name} fill={s.color} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value, name) => [`${Math.round(Number(value))} kcal`, String(name)]}
+              contentStyle={{
+                fontSize: 12,
+                borderRadius: 8,
+                border: "1px solid currentColor",
+              }}
             />
-          ) : null}
-        </BarChart>
-      </ResponsiveContainer>
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-semibold tabular-nums">{Math.round(totals.kcal)}</span>
+          <span className="text-xs uppercase tracking-wide text-black/50 dark:text-white/50">
+            kcal
+          </span>
+        </div>
+      </div>
+      <DonutLegend slices={slices} totalKcal={totalKcal} />
     </div>
   );
 }

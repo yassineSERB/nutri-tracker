@@ -2,10 +2,11 @@ import "server-only";
 
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import {
+  bloodResults,
   entries,
   foods,
   profiles,
@@ -16,6 +17,7 @@ import {
   type Profile,
 } from "@/db/schema";
 import { MEAL_LABELS, MEAL_TYPES } from "@/db/schema";
+import { analyteByCode } from "@/lib/lab";
 
 /**
  * Data Access Layer. Every read of user data goes through here so that the
@@ -210,6 +212,112 @@ export async function addWater(
 
 export { MEAL_LABELS, MEAL_TYPES };
 export type { MealType };
+
+/** One saved measurement, plus the label the UI needs. */
+export type BloodResultView = {
+  id: number;
+  testOn: string;
+  analyte: string;
+  label: string;
+  value: number;
+  unit: string;
+  refLow: number | null;
+  refHigh: number | null;
+  note: string | null;
+};
+
+export type BloodPanel = {
+  testOn: string;
+  results: BloodResultView[];
+};
+
+/** How many past panels the page shows. */
+const PANEL_LIMIT = 24;
+
+/**
+ * Panels newest first, each carrying every row that shares its `testOn`. The
+ * rows are fetched once and grouped in JS: the count of panels is the only thing
+ * that would justify a second query, and the whole table is a few dozen rows per
+ * user.
+ */
+export async function getBloodPanels(): Promise<BloodPanel[]> {
+  const userId = await currentUserId();
+
+  const rows = db
+    .select({
+      id: bloodResults.id,
+      testOn: bloodResults.testOn,
+      analyte: bloodResults.analyte,
+      value: bloodResults.value,
+      unit: bloodResults.unit,
+      refLow: bloodResults.refLow,
+      refHigh: bloodResults.refHigh,
+      note: bloodResults.note,
+    })
+    .from(bloodResults)
+    .where(eq(bloodResults.userId, userId))
+    .orderBy(desc(bloodResults.testOn), asc(bloodResults.id))
+    .all();
+
+  const byDate = new Map<string, BloodResultView[]>();
+  for (const row of rows) {
+    const list = byDate.get(row.testOn) ?? [];
+    list.push({ ...row, label: analyteByCode(row.analyte)?.label ?? row.analyte });
+    byDate.set(row.testOn, list);
+  }
+
+  return [...byDate.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .slice(0, PANEL_LIMIT)
+    .map(([testOn, results]) => ({ testOn, results }));
+}
+
+/** The analytes already measured on a date, for prefilling the form. */
+export async function getBloodPanelForDate(dayKey: string): Promise<BloodResultView[]> {
+  const panels = await getBloodPanels();
+  return panels.find((panel) => panel.testOn === dayKey)?.results ?? [];
+}
+
+export type BloodInput = {
+  analyte: string;
+  value: number;
+  unit: string;
+  refLow: number | null;
+  refHigh: number | null;
+  note: string | null;
+};
+
+/**
+ * One panel per date: saving a date that already exists replaces it, so a
+ * mis-typed value is corrected by resending the same date rather than piling up
+ * a second set of rows. Rows are removed by `userId` **and** `testOn`, never by
+ * date alone, or this would delete another account's panel.
+ */
+export async function saveBloodResults(dayKey: string, inputs: BloodInput[]): Promise<number> {
+  const userId = await currentUserId();
+
+  db.transaction(() => {
+    db.delete(bloodResults)
+      .where(and(eq(bloodResults.userId, userId), eq(bloodResults.testOn, dayKey)))
+      .run();
+
+    if (inputs.length === 0) return;
+
+    db.insert(bloodResults)
+      .values(inputs.map((input) => ({ ...input, userId, testOn: dayKey })))
+      .run();
+  });
+
+  return inputs.length;
+}
+
+export async function deleteBloodPanel(dayKey: string): Promise<void> {
+  const userId = await currentUserId();
+
+  db.delete(bloodResults)
+    .where(and(eq(bloodResults.userId, userId), eq(bloodResults.testOn, dayKey)))
+    .run();
+}
 
 const PROFILE_DEFAULTS = {
   sex: null,
