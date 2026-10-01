@@ -231,14 +231,18 @@ export type BloodPanel = {
   results: BloodResultView[];
 };
 
-/** How many past panels the page shows. */
+/**
+ * How many past panels the page shows, the most recent ones: the list is
+ * chronological, so the cut has to be taken at the end or the oldest panels
+ * would be the ones shown.
+ */
 const PANEL_LIMIT = 24;
 
 /**
- * Panels newest first, each carrying every row that shares its `testOn`. The
- * rows are fetched once and grouped in JS: the count of panels is the only thing
- * that would justify a second query, and the whole table is a few dozen rows per
- * user.
+ * Panels in chronological order (oldest first), each carrying every row that
+ * shares its `testOn`. The rows are fetched once and grouped in JS: the count
+ * of panels is the only thing that would justify a second query, and the whole
+ * table is a few dozen rows per user.
  */
 export async function getBloodPanels(): Promise<BloodPanel[]> {
   const userId = await currentUserId();
@@ -256,7 +260,7 @@ export async function getBloodPanels(): Promise<BloodPanel[]> {
     })
     .from(bloodResults)
     .where(eq(bloodResults.userId, userId))
-    .orderBy(desc(bloodResults.testOn), asc(bloodResults.id))
+    .orderBy(asc(bloodResults.testOn), asc(bloodResults.id))
     .all();
 
   const byDate = new Map<string, BloodResultView[]>();
@@ -267,8 +271,8 @@ export async function getBloodPanels(): Promise<BloodPanel[]> {
   }
 
   return [...byDate.entries()]
-    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
-    .slice(0, PANEL_LIMIT)
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .slice(-PANEL_LIMIT)
     .map(([testOn, results]) => ({ testOn, results }));
 }
 
