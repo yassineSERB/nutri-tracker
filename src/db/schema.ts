@@ -104,7 +104,7 @@ export const entries = sqliteTable(
 );
 
 
-export const SEXES = ["female", "male", "other"] as const;
+export const SEXES = ["female", "male"] as const;
 export type Sex = (typeof SEXES)[number];
 
 export const ACTIVITY_LEVELS = [

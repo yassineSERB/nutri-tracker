@@ -46,7 +46,6 @@ export const GOAL_MODE_LABELS: Record<GoalMode, string> = {
 export const SEX_LABELS: Record<Sex, string> = {
   female: "Femme",
   male: "Homme",
-  other: "Autre",
 };
 
 /** A null field means "no target known yet", not zero: the user has not
@@ -91,8 +90,9 @@ export function restingKcal(profile: Profile, now = new Date()): number | null {
   if (profile.weightKg < 25 || profile.weightKg > 300) return null;
 
   const base = 10 * profile.weightKg + 6.25 * profile.heightCm - 5 * age;
-  // The published constant is +5 for men and -161 for women. `other` uses the
-  // midpoint, which is the most defensible default without a separate input.
+  // The published constant is +5 for men and -161 for women. An unset sex uses
+  // the midpoint of the two, which is the most defensible default without
+  // another input.
   const offset = profile.sex === "male" ? 5 : profile.sex === "female" ? -161 : -78;
   return base + offset;
 }

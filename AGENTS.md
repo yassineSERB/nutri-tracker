@@ -97,7 +97,8 @@ OFF is a volunteer project and rate-limits hard, so `request()` retries 429/5xx 
 `src/lib/goals.ts` is pure, framework-free and deliberately **not** `server-only`, so both the server pages and any client component can import it. It resolves each field independently — a manual override wins, and whatever is left is filled in by the formula only if the profile holds the inputs for it. That is why `DailyGoals` fields are `number | null` and `computeGoals()` never returns `null`:
 
 - `null` means "no target known yet". It must not be collapsed to `0`: `GoalsPanel` treats `0` as "no target" and would render a full green bar.
-- BMR is Mifflin-St Jeor (`10·kg + 6.25·cm − 5·age + 5/−161`), where `other` and an unset sex both use the `-78` midpoint. Inputs outside 25–300 kg, 100–250 cm or age 10–120 return `null` rather than a nonsense number.
+- BMR is Mifflin-St Jeor (`10·kg + 6.25·cm − 5·age + 5/−161`); an unset sex uses the `-78` midpoint. Inputs outside 25–300 kg, 100–250 cm or age 10–120 return `null` rather than a nonsense number.
+- `SEXES` is `["female", "male"]` — the older `other` value was removed, and `drizzle/0006_drop_sex_other.sql` rewrites any leftover row to `NULL`. The column is plain `text` with no `CHECK`, so narrowing the enum is a TypeScript change plus that data migration, never a table rebuild.
 - Calories floor at 1200 **only when computed**; a value the user typed is respected as entered, however low.
 - Carbs are the remainder, `(kcal − protein·4 − fat·9) / 4`, floored at 0 so a large protein/fat override cannot produce a negative target.
 - `computed` is true only when **all four** overrides are null. A single manual field makes it a mix, and the UI says "Valeurs personnalisées".
